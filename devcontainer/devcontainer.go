@@ -130,7 +130,7 @@ func (s Spec) HasDockerfile() bool {
 // devcontainerDir is the path to the directory where the devcontainer.json file
 // is located. scratchDir is the path to the directory where the Dockerfile will
 // be written to if one doesn't exist.
-func (s *Spec) Compile(fs billy.Filesystem, devcontainerDir, scratchDir, fallbackDockerfile, workspaceFolder string) (*Compiled, error) {
+func (s *Spec) Compile(fs billy.Filesystem, devcontainerDir, scratchDir string, mountScratchDir bool, fallbackDockerfile, workspaceFolder string) (*Compiled, error) {
 	params := &Compiled{
 		User:         s.ContainerUser,
 		ContainerEnv: s.ContainerEnv,
@@ -213,14 +213,14 @@ func (s *Spec) Compile(fs billy.Filesystem, devcontainerDir, scratchDir, fallbac
 	if remoteUser == "" {
 		remoteUser = params.User
 	}
-	params.DockerfileContent, err = s.compileFeatures(fs, devcontainerDir, scratchDir, params.User, remoteUser, params.DockerfileContent)
+	params.DockerfileContent, err = s.compileFeatures(fs, devcontainerDir, scratchDir, mountScratchDir, params.User, remoteUser, params.DockerfileContent)
 	if err != nil {
 		return nil, err
 	}
 	return params, nil
 }
 
-func (s *Spec) compileFeatures(fs billy.Filesystem, devcontainerDir, scratchDir, containerUser, remoteUser, dockerfileContent string) (string, error) {
+func (s *Spec) compileFeatures(fs billy.Filesystem, devcontainerDir, scratchDir string, mountScratchDir bool, containerUser, remoteUser, dockerfileContent string) (string, error) {
 	// If there are no features, we don't need to do anything!
 	if len(s.Features) == 0 {
 		return dockerfileContent, nil
@@ -283,7 +283,7 @@ func (s *Spec) compileFeatures(fs billy.Filesystem, devcontainerDir, scratchDir,
 		if err != nil {
 			return "", fmt.Errorf("extract feature %s: %w", featureRefRaw, err)
 		}
-		directive, err := spec.Compile(containerUser, remoteUser, featureOpts)
+		directive, err := spec.Compile(scratchDir, mountScratchDir, containerUser, remoteUser, featureOpts)
 		if err != nil {
 			return "", fmt.Errorf("compile feature %s: %w", featureRefRaw, err)
 		}

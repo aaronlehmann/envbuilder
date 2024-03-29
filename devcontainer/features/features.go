@@ -194,7 +194,7 @@ type Spec struct {
 
 // Extract unpacks the feature from the image and returns a set of lines
 // that should be appended to a Dockerfile to install the feature.
-func (s *Spec) Compile(containerUser, remoteUser string, options map[string]any) (string, error) {
+func (s *Spec) Compile(scratchDir string, mountScratchDir bool, containerUser, remoteUser string, options map[string]any) (string, error) {
 	// TODO not sure how we figure out _(REMOTE|CONTAINER)_USER_HOME
 	// as per the feature spec.
 	// See https://containers.dev/implementors/features/#user-env-var
@@ -219,7 +219,11 @@ func (s *Spec) Compile(containerUser, remoteUser string, options map[string]any)
 	// regardless of map iteration order.
 	sort.Strings(runDirective)
 	// See https://containers.dev/implementors/features/#invoking-installsh
-	runDirective = append([]string{"RUN"}, runDirective...)
+	runStart := []string{"RUN"}
+	if mountScratchDir {
+		runStart = append(runStart, "--mount=type=bind,source="+scratchDir+",target="+scratchDir+",rw")
+	}
+	runDirective = append(runStart, runDirective...)
 	runDirective = append(runDirective, "./install.sh")
 
 	comment := ""
